@@ -109,14 +109,13 @@ char errbuf[CURL_ERROR_SIZE];
        data. */ 
     curl_easy_setopt(curl, CURLOPT_URL, url);
 
+    // set HTTP headers
     list = curl_slist_append(list, "Accept:");
     list = curl_slist_append(list, "Content-Type: application/json");
     list = curl_slist_append(list, "Accept-Language: en-us");
-
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
 
-    // printf("JSON:\n%s\n", json);
-    /* Now specify the POST data */ 
+    /* Now specify the actual JSON payload as POST data */ 
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json);
 
     /* provide a buffer to store errors in */
@@ -128,15 +127,15 @@ char errbuf[CURL_ERROR_SIZE];
     if(res != CURLE_OK) {
         fprintf(stderr, "\n\ncurl_easy_perform() failed: %s\n\n", errbuf);
         exit(1);
- 
-        /* always cleanup */ 
-        curl_easy_cleanup(curl);
     }
 
     curl_slist_free_all(list); /* free the header list */
 
+    /* always cleanup */ 
+    curl_easy_cleanup(curl);
+
   } else {
-        fprintf(stderr, "\nCould not initialize curl_easy_init()\n");
+     fprintf(stderr, "\nCould not initialize curl_easy_init()\n");
   }
   curl_global_cleanup();
 }
@@ -157,41 +156,33 @@ json_t *j_cnf_obj;
     j_cnf_obj = json_object();
 
     time_t now = time(NULL);
+    latency = now - (UINT32) tols;
 
+    json_object_set(j_cnf_obj, "chn", json_string(chn));
+    json_object_set(j_cnf_obj, "loc", json_string(loc));
+
+    // use UTC time and format for PostGreSQL "timestamp without a timezone (treated as UTC)"
+    strftime(tbuf, sizeof(tbuf), "%Y-%m-%d %H:%M:%S -00:00", gmtime_r(&now, &atime_tm));
+    json_object_set(j_cnf_obj, "reported_at", json_string(tbuf));
+
+    json_object_set(j_cnf_obj, "freq", json_real(srate));
+    json_object_set(j_cnf_obj, "nseg", json_integer(nseg));
+    
     if (tols != (REAL64) ISI_UNDEFINED_TIMESTAMP) {
 
-        latency = now - (UINT32) tols;
+        // these only exist when for channels with actual telemtry data
 
-        json_object_set(j_cnf_obj, "chn", json_string(chn));
-        json_object_set(j_cnf_obj, "loc", json_string(loc));
-
-        strftime(tbuf, sizeof(tbuf), "%Y-%m-%d %H:%M:%S -00:00", gmtime_r(&now, &atime_tm));
-        json_object_set(j_cnf_obj, "reported_at", json_string(tbuf));
-
-        json_object_set(j_cnf_obj, "freq", json_real(srate));
-        json_object_set(j_cnf_obj, "nseg", json_integer(nseg));
-        
+        // use UTC time and format for PostGreSQL "timestamp without a timezone (treated as UTC)"
         atime_t = (const time_t)tols;
         strftime(tbuf, sizeof(tbuf), "%Y-%m-%d %H:%M:%S -00:00", gmtime_r(&atime_t, &atime_tm));
         json_object_set(j_cnf_obj, "most_recent_data",      json_string(tbuf));
         json_object_set(j_cnf_obj, "data_latency",   json_integer((INT32)latency));
 
+        // use UTC time and format for PostGreSQL "timestamp without a timezone (treated as UTC)"
         atime_t = (const time_t)(now - tslw);
         strftime(tbuf, sizeof(tbuf), "%Y-%m-%d %H:%M:%S -00:00", gmtime_r(&atime_t, &atime_tm));
         json_object_set(j_cnf_obj, "last_write",      json_string(tbuf));
         json_object_set(j_cnf_obj, "write_latency",   json_integer((INT32)tslw));
-
-
-    } else {
-
-        json_object_set(j_cnf_obj, "chn", json_string(chn));
-        json_object_set(j_cnf_obj, "loc", json_string(loc));
-
-        strftime(tbuf, sizeof(tbuf), "%Y-%m-%d %H:%M:%S -00:00", gmtime_r(&now, &atime_tm));
-        json_object_set(j_cnf_obj, "reported_at", json_string(tbuf));
-
-        json_object_set(j_cnf_obj, "freq", json_real(srate));
-        json_object_set(j_cnf_obj, "nseg", json_integer(nseg));
 
     }
 
@@ -210,41 +201,35 @@ struct tm atime_tm;
     json_t *j_res = json_object(); 
 
     time_t now = time(NULL);
+    data_latency = time(NULL) - (UINT32) tols;
 
+    // set fields into JSON structs...
+    json_object_set(j_res, "sta", json_string(sta));
+
+    // use UTC time and format for PostGreSQL "timestamp without a timezone (treated as UTC)"
+    strftime(tbuf, sizeof(tbuf), "%Y-%m-%d %H:%M:%S -00:00", gmtime_r(&now, &atime_tm));
+    json_object_set(j_res, "reported_at", json_string(tbuf));
+
+    json_object_set(j_res, "livechn_pcnt", json_integer(livechn));
 
     if (tols != (REAL64) ISI_UNDEFINED_TIMESTAMP) {
 
-        data_latency = time(NULL) - (UINT32) tols;
-        // printf("sta / livechn / nseg / tols / latency / tslw: %s / %d / %d / %s / %s / %s\n", sta, livechn, nseg, utilLttostr((INT32)tols,0,tbuf), utilLttostr((INT32)latency,8,tbuf), utilLttostr((INT32)tslw,8,tbuf));
+        // these only exist when the station has one or more channels with actual telemtry data
 
-        json_object_set(j_res, "sta", json_string(sta));
-
-        strftime(tbuf, sizeof(tbuf), "%Y-%m-%d %H:%M:%S -00:00", gmtime_r(&now, &atime_tm));
-        json_object_set(j_res, "reported_at", json_string(tbuf));
-
-        json_object_set(j_res, "livechn_pcnt", json_integer(livechn));
         json_object_set(j_res, "nseg_avg", json_integer(nseg));
 
+        // use UTC time and format for PostGreSQL "timestamp without a timezone (treated as UTC)"
         atime_t = (const time_t)tols;
         strftime(tbuf, sizeof(tbuf), "%Y-%m-%d %H:%M:%S -00:00", gmtime_r(&atime_t, &atime_tm));
         json_object_set(j_res, "sta_most_recent_data", json_string(tbuf));
         json_object_set(j_res, "sta_data_latency_secs",   json_integer((INT32)data_latency));
 
+        // use UTC time and format for PostGreSQL "timestamp without a timezone (treated as UTC)"
         atime_t = (const time_t)(now - tslw);
         strftime(tbuf, sizeof(tbuf), "%Y-%m-%d %H:%M:%S -00:00", gmtime_r(&atime_t, &atime_tm));
         json_object_set(j_res, "sta_last_write_at",      json_string(tbuf));
         json_object_set(j_res, "sta_write_latency_secs",   json_integer((INT32)tslw));
 
-    } else {
-
-        // printf("sta / linechn : %s / %d\n", sta, livechn);
-
-        json_object_set(j_res, "sta", json_string(sta));
-
-        strftime(tbuf, sizeof(tbuf), "%Y-%m-%d %H:%M:%S -00:00", gmtime_r(&now, &atime_tm));
-        json_object_set(j_res, "reported_at", json_string(tbuf));
-
-        json_object_set(j_res, "livechn_pcnt", json_integer(livechn));
     }
 
     return j_res;
@@ -307,8 +292,6 @@ json_t *j_chn_arr;
             do {
 
                 if (verbose) { fprintf(stdout, "Processing (sta chn loc) : %s %s %s\n", soh->entry[ndx].name.sta, soh->entry[ndx].name.chn, soh->entry[ndx].name.loc); }
-
-                // printf("\nSTA / CHN: %s / %s\n", cur_sta, soh->entry[ndx].name.chn);
 
                 if (soh->entry[ndx].tols.value != (REAL64) ISI_UNDEFINED_TIMESTAMP) {
                     if (sumtols == (REAL64) ISI_UNDEFINED_TIMESTAMP || soh->entry[ndx].tols.value > sumtols) {
