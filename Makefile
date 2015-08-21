@@ -1,5 +1,5 @@
 # $Id: Makefile,v 1.11 2014/08/29 21:10:12 dechavez Exp $
-# Unix makefile for isiwww
+# Unix makefile for isihttp
 
 VPATH   = 
 INCDIR  = $(VPATH)../../include
@@ -11,7 +11,7 @@ INCS   += -I$(INCDIR)
 DEFS    = -D$(OSNAME) -D$(OSTYPE) -DOSVER=$(OSVER) -D_REENTRANT
 DEFS   += -D_POSIX_PTHREAD_SEMANTICS
 DEFS   += -DDEFAULT_SERVER=\"idahub.ucsd.edu\"
-CFLAGS  = $(OPTMIZ) $(INCS) $(DEFS) $(SITEFLAGS)
+CFLAGS  = $(OPTMIZ) $(INCS) $(DEFS) $(SITEFLAGS) -Wall
 
 LIBS    = -L$(LIBDIR) 
 LIBS   += $(LIBDIR)/libisi.a $(LIBDIR)/libida.a $(LIBDIR)/libliss.a $(LIBDIR)/libcssio.a $(LIBDIR)/libiacp.a 
@@ -19,14 +19,18 @@ LIBS   += $(LIBDIR)/libisidb.a $(LIBDIR)/libdbio.a $(LIBDIR)/libida10.a $(LIBDIR
 LIBS   += $(SQLLIBS)
 LIBS   += -lz
 LIBS   += -lm
+LIBS += -lcurl
 LIBS   += $(MTLIBS)
 LIBS   += $(POSIX4LIB)
 LIBS   += $(SOCKLIBS)
+# jansson json lib
+# remember to set LD_LIBRARY_PATH
+LIBS   += /usr/local/lib/libjansson.a
 
 OBJS  = ReleaseNotes.o
 OBJS += main.o
 
-OUTPUT  = isiwww
+OUTPUT  = isihttp
  
 all: OBJS/$(PLATFORM) FORCE
 	cd OBJS/$(PLATFORM); \
@@ -58,4 +62,4 @@ FORCE:
 $(OBJS): $(INCDIR)/isi.h $(INCDIR)/iacp.h $(INCDIR)/logio.h $(INCDIR)/util.h 
  
 $(OUTPUT): $(OBJS) $(LIBDIR)/libisi.a $(LIBDIR)/libiacp.a $(LIBDIR)/liblogio.a $(LIBDIR)/libutil.a
-	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LIBS)
+	$(CC) $(CFLAGS) -v -o $@ $(OBJS) $(LIBS)
