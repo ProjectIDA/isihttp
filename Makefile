@@ -19,13 +19,12 @@ LIBS   += $(LIBDIR)/libisidb.a $(LIBDIR)/libdbio.a $(LIBDIR)/libida10.a $(LIBDIR
 LIBS   += $(SQLLIBS)
 LIBS   += -lz
 LIBS   += -lm
-LIBS += -lcurl
+LIBS   += -lcurl # libcurl for HTTP calls
 LIBS   += $(MTLIBS)
 LIBS   += $(POSIX4LIB)
 LIBS   += $(SOCKLIBS)
-# jansson json lib
-# remember to set LD_LIBRARY_PATH
-LIBS   += /usr/local/lib/libjansson.a
+
+LIBS   += /usr/local/lib/libjansson.a # jansson json lib
 
 OBJS  = ReleaseNotes.o
 OBJS += main.o
